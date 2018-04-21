@@ -16,6 +16,7 @@ contract WhatRocks {
 
   // Calls when the contract is sent ETH.
   function mint(uint tokenSupply) public payable {
+    require(charityTokenSupply == 0);
     // Set the brandOwner to the person who calls the address
     brandOwner = msg.sender;
 
@@ -45,7 +46,7 @@ contract WhatRocks {
   function transfer (address to, uint256 tokens) public {
     // Checks whether or not there is actually the amount available in the address
     // Checks whether or not the address "to" is whitelisted
-    require(whitelist[to] = true);
+    require(whitelist[to] == true);
     require(balances[msg.sender] >= tokens);
 
     // If both are true, transfer the
@@ -55,7 +56,7 @@ contract WhatRocks {
 
   function redeem (uint tokens) public {
     // Checks whether or not the address is on the whitelist
-    require(whitelist[msg.sender] = true);
+    require(whitelist[msg.sender] == true);
 
     // If it's on the whitelist then...
     // Decrease the amount of tokens on the mapping by the amount - do we need to destroy or does it not matter?
@@ -66,7 +67,6 @@ contract WhatRocks {
     uint256 ethToTransfer = tokens/charityTokenSupply;
     charityFund[brandOwner] -= ethToTransfer;
     msg.sender.transfer(ethToTransfer);
-
   }
 
   //Add an entry to the
