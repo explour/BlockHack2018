@@ -2,79 +2,78 @@ pragma solidity ^0.4.17;
 
 contract WhatRocks {
 
-  // Ether supply in contract, associated with each brand
-  mapping(address => uint256) charityFund;
-  mapping(address => uint256) balances;
-  mapping(address => bool) whitelist;
-  uint charityTokenSupply;
-  address brandOwner;
+  // Ether supply associated with each brand address
+  mapping(address => uint256) charityEthSupply;
+  // Token ledger associated with each brand address
+  mapping(address => mapping (address => uint256)) charityToken;
+  // Token supply associated with each brand address
+  mapping(address => uint) charityTokenSupply;
+  // Whitelists associated with each brand address
+  mapping(address => mapping(address => bool)) whitelist;
+  // List of all brand owners
+  mapping(address => bool) brandOwners;
+  // Variable for storing the owner of the contract
   address owner;
 
   function WhatRocks() public {
+    // Sets the owner to us
     owner = msg.sender;
   }
 
   // Calls when the contract is sent ETH.
   function mint(uint tokenSupply) public payable {
-    require(charityTokenSupply == 0);
-    // Set the brandOwner to the person who calls the address
-    brandOwner = msg.sender;
 
-    // Stores the amount of ETH associated with each brand address
-    charityFund[msg.sender] = msg.value;
+    // Instantiates and sets all of the tokenSupply to be owned by brandOwner
+    charityToken[msg.sender][msg.sender] = tokenSupply;
 
     // Sets the other variables for the instantiated token balances
-    charityTokenSupply = tokenSupply;
+    charityTokenSupply[msg.sender] = tokenSupply;
+    charityEthSupply[msg.sender] = msg.value;
+    brandOwners[msg.sender] = true;
 
-    // Set all of the tokenSupply to be owned by brandOwner
-    balances[msg.sender] = tokenSupply;
   }
 
   //Allows the brandOwner to distribute tokens to a certain address
-  function distribute (address to, uint256 tokens) public {
-    // Require msg.sender to be the
-    // Require there to be enough
+  function distribute (address to, uint256 tokens, address brandOwner) public {
+    // Only allows BrandOwner to send tokens; requires there to be enough tokens to send
     require(msg.sender == brandOwner);
-    require(balances[msg.sender] >= tokens);
+    require(charityToken[brandOwner][msg.sender] >= tokens);
 
-    // If it is, then send the recipient
-    balances[msg.sender] -= tokens;
-    balances[to] += tokens;
+    // If it is, then update the ledger for the tokens
+    charityToken[brandOwner][msg.sender] -= tokens;
+    charityToken[brandOwner][to] += tokens;
   }
 
   //Allows consumers to transfer
-  function transfer (address to, uint256 tokens) public {
+  function transfer (address to, uint256 tokens, address brandOwner) public {
     // Checks whether or not there is actually the amount available in the address
     // Checks whether or not the address "to" is whitelisted
-    require(whitelist[to] == true);
-    require(balances[msg.sender] >= tokens);
+    require(whitelist[brandOwner][to] == true);
+    require(charityToken[brandOwner][msg.sender] >= tokens);
 
-    // If both are true, transfer the
-    balances[msg.sender] -= tokens;
-    balances[to] += tokens;
+    // If both are true, then update the ledger for the tokens
+    charityToken[brandOwner][msg.sender] -= tokens;
+    charityToken[brandOwner][to] += tokens;
   }
 
-  function redeem (uint tokens) public {
-    // Checks whether or not the address is on the whitelist
-    require(whitelist[msg.sender] == true);
+  function redeem (uint tokens, address brandOwner) public {
+    // Checks whether or not the address is on the whitelist / is a charity
+    require(whitelist[brandOwner][msg.sender] == true);
 
-    // If it's on the whitelist then...
-    // Decrease the amount of tokens on the mapping by the amount - do we need to destroy or does it not matter?
-    balances[msg.sender] -= tokens;
+    // If it's on the whitelist then, update the token ledger - only subtract
+    charityToken[brandOwner][msg.sender] -= tokens;
 
     // Transfer a certain amount of ETH to the address
-    // Transfer the tokens to a 00x address
-    uint256 ethToTransfer = tokens/charityTokenSupply;
-    charityFund[brandOwner] -= ethToTransfer;
+    // Calculates the amount of ETH to transfer
+    uint256 ethToTransfer = charityEthSupply[brandOwner] * tokens / charityTokenSupply[brandOwner];
+    charityEthSupply[brandOwner] -= ethToTransfer;
     msg.sender.transfer(ethToTransfer);
   }
 
   //Add an entry to the
-  function addToWhitelist (address addr) public {
+  function addToWhitelist (address addr, address brandOwner) public {
     require(msg.sender == brandOwner);
-    whitelist[addr] = true;
+    whitelist[brandOwner][addr] = true;
   }
-
-
 
 }
